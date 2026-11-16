@@ -43,6 +43,7 @@
   button:hover{border-color:var(--blue)}
   button.sm{padding:2px 8px;font-size:12px}
   button.main{background:var(--blue);color:var(--card);border-color:var(--blue);width:100%;padding:13px;font-size:15px}
+  button.sec{width:100%;margin-top:8px;color:var(--blue);border-color:var(--blue);background:var(--card)}
   button.add{grid-column:span 2;border-style:dashed;color:var(--blue)}
   details.more{background:var(--card);border-radius:14px;box-shadow:0 2px 10px rgba(0,0,0,.06)}
   details.more>summary{padding:16px 20px;cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center}
@@ -85,6 +86,9 @@
         <h2><span class="num">5</span> 내려받기</h2>
         <ul class="check" id="check"></ul>
         <button class="main" id="bZip">사이트 ZIP 내려받기</button>
+        <button class="sec" id="bSingle">단일 HTML 파일 내려받기</button>
+        <button class="sec" id="bImgs">기존 이미지 폴더 불러오기 (site/images)</button>
+        <input id="fImgs" type="file" webkitdirectory multiple hidden>
         <div id="msg"></div>
         <p class="guide">ZIP을 풀어 <code>site/</code> 폴더에 덮어쓴 뒤 배포하세요. 올리지 않은 이미지는 기존 <code>site/images/</code> 파일을 그대로 씁니다.</p>
         <div class="tools">
@@ -101,6 +105,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <script src="defaults.js"></script>
 <script src="render.js"></script>
+<script src="styles.js"></script>
 <script>
 (function(){
   var KEY="hy-academy-generator-v2", SITE="../site/", QR="images/apply-qr.png";
@@ -336,6 +341,50 @@
     ents.push({name:"program-data.json",data:enc.encode(JSON.stringify(D,null,2))});
     download(zip(ents),"site-"+date+"-"+(D.program.month||"")+"월.zip");
     say("ZIP 생성 완료 · 압축을 풀어 site/ 폴더에 덮어쓴 뒤 배포하세요.");
+  };
+  /* ---------- 단일 HTML 내보내기 ---------- */
+  var SINGLE_JS='(function(){var pgs=[].slice.call(document.querySelectorAll(".pg"));'+
+    'function show(){var k=(location.hash||"#index").slice(1);var t=pgs.filter(function(p){return p.dataset.page===k})[0]||pgs[0];'+
+    'pgs.forEach(function(p){p.hidden=p!==t});window.scrollTo(0,0)}'+
+    'window.addEventListener("hashchange",show);show();'+
+    'pgs.forEach(function(pg){var b=pg.querySelector("[data-menubtn]"),m=pg.querySelector("[data-mobilemenu]"),o=pg.querySelector("[data-iconopen]"),c=pg.querySelector("[data-iconclose]");if(!b)return;'+
+    'function set(x){m.classList.toggle("hidden",!x);o.classList.toggle("hidden",x);c.classList.toggle("hidden",!x);b.setAttribute("aria-expanded",String(x))}'+
+    'b.addEventListener("click",function(){set(m.classList.contains("hidden"))});m.querySelectorAll("a").forEach(function(a){a.addEventListener("click",function(){set(false)})})});'+
+    'var nh=matchMedia("(hover: none)").matches,rd=matchMedia("(prefers-reduced-motion: reduce)").matches;'+
+    'if(nh&&!rd&&"IntersectionObserver" in window){var io=new IntersectionObserver(function(es){es.forEach(function(e){e.target.classList.toggle("is-on",e.isIntersecting)})},{rootMargin:"-38% 0px -38% 0px"});document.querySelectorAll(".card").forEach(function(c){io.observe(c)})}})();';
+
+  function singleHtml(out){
+    var keys=SiteRender.pages;
+    var pages=keys.map(function(k){
+      var h=out[k+".html"], cls=(h.match(/<body class="([^"]*)"/)||[])[1]||"";
+      var s=h.indexOf(">",h.indexOf("<body"))+1, e=h.indexOf("<script>\n  var btn");
+      var inner=h.slice(s,e)
+        .replace(/href="(index|program|education|lineup|apply|goods)\.html"/g,'href="#$1"')
+        .replace('id="menuBtn"','data-menubtn').replace('id="mobileMenu"','data-mobilemenu')
+        .replace('id="iconOpen"','data-iconopen').replace('id="iconClose"','data-iconclose');
+      return '<div class="pg '+cls+'" data-page="'+k+'" hidden>\n'+inner+'</div>\n';
+    }).join("");
+    var idx=out["index.html"];
+    var head=idx.slice(0,idx.indexOf("</head>")).replace('<link rel="stylesheet" href="styles.css">',
+      "<style>\n"+SITE_CSS+"\n.pg{min-height:100vh}.pg[hidden]{display:none}\n</style>");
+    var html=head+"</head>\n<body class=\"font-sans antialiased\">\n"+pages+"<script>"+SINGLE_JS+"<\/script>\n</body>\n</html>\n";
+    var missing={};
+    Object.keys(files).forEach(function(p){html=html.split(p).join(files[p].url)});
+    (html.match(/images\/[A-Za-z0-9_.\-]+\.(png|jpe?g|webp|gif|svg)/g)||[]).forEach(function(p){missing[p]=1});
+    return {html:html,missing:Object.keys(missing)};
+  }
+  document.getElementById("bSingle").onclick=function(){
+    var w=problems();
+    if(w.length&&!confirm("확인이 필요합니다:\n- "+w.join("\n- ")+"\n\n그래도 내려받을까요?"))return;
+    var r=singleHtml(SiteRender.build(D,new Date().toISOString().slice(0,10)));
+    download(new Blob([r.html],{type:"text/html"}),"academy-"+new Date().toISOString().slice(0,10)+"-"+(D.program.month||"")+"월.html");
+    say(r.missing.length?"완료 · 이미지 "+r.missing.length+"개는 파일에 포함하지 못했습니다. ‘기존 이미지 폴더 불러오기’를 먼저 눌러 주세요.":"단일 HTML 생성 완료 · 이 파일 하나만 있으면 열립니다.");
+  };
+  document.getElementById("bImgs").onclick=function(){document.getElementById("fImgs").click()};
+  document.getElementById("fImgs").onchange=function(){
+    var list=[].slice.call(this.files).filter(function(f){return /^image\//.test(f.type)}),n=0;
+    if(!list.length){say("이미지를 찾지 못했습니다. site/images 폴더를 선택하세요.");return}
+    list.forEach(function(f){var r=new FileReader();r.onload=function(){var p="images/"+f.name;if(!files[p])files[p]={url:r.result,bytes:b64bytes(r.result)};if(++n===list.length){say(n+"개 이미지를 불러왔습니다.");preview()}};r.readAsDataURL(f)});
   };
   document.getElementById("bSave").onclick=function(){download(new Blob([JSON.stringify(D,null,2)],{type:"application/json"}),"program-"+new Date().toISOString().slice(0,10)+".json")};
   document.getElementById("bLoad").onclick=function(){document.getElementById("fLoad").click()};
