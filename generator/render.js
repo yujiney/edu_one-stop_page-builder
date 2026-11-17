@@ -378,7 +378,7 @@
       '      <div class="apply-route">\n        <div class="apply-route__text">\n          <p class="apply-route__label">신청 방법</p>\n' +
       '          <p class="apply-route__path">\n            한양대 비교과 통합관리 시스템 <strong>HY-LU</strong> 접속\n            <span aria-hidden="true">›</span>\n' +
       "            <strong>「" + esc(P.title) + "」</strong> 신청\n          </p>\n" +
-      '          <p class="apply-route__sub">휴대폰으로 오른쪽 QR을 찍으면 신청 화면으로 바로 이동합니다.</p>\n' +
+      '          <p class="apply-route__sub">휴대폰으로 QR을 찍으면 신청 화면으로 바로 이동합니다.</p>\n' +
       '          <a class="apply-route__link" href="' + esc(A.hylu) + '" target="_blank" rel="noopener">HY-LU 신청 페이지 열기\n' +
       '            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 17 17 7m0 0H8m9 0v9" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>\n          </a>\n        </div>\n' +
       '        <figure class="apply-qr">\n          <img src="images/apply-qr.png" alt="' + esc(P.title) + ' 신청 QR 코드">\n          <figcaption>QR로 바로 신청</figcaption>\n        </figure>\n      </div>\n\n' +

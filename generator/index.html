@@ -343,7 +343,7 @@
     say("ZIP 생성 완료 · 압축을 풀어 site/ 폴더에 덮어쓴 뒤 배포하세요.");
   };
   /* ---------- 단일 HTML 내보내기 ---------- */
-  var SINGLE_JS='(function(){var pgs=[].slice.call(document.querySelectorAll(".pg"));'+
+  var SINGLE_JS='(function(){var IMG=window.__IMG||{};["srcset","src"].forEach(function(a){document.querySelectorAll("[data-"+a+"]").forEach(function(e){var u=IMG[e.getAttribute("data-"+a)];if(u)e.setAttribute(a,u)})});var pgs=[].slice.call(document.querySelectorAll(".pg"));'+
     'function show(){var k=(location.hash||"#index").slice(1);var t=pgs.filter(function(p){return p.dataset.page===k})[0]||pgs[0];'+
     'pgs.forEach(function(p){p.hidden=p!==t});window.scrollTo(0,0)}'+
     'window.addEventListener("hashchange",show);show();'+
@@ -368,9 +368,13 @@
     var head=idx.slice(0,idx.indexOf("</head>")).replace('<link rel="stylesheet" href="styles.css">',
       "<style>\n"+SITE_CSS+"\n.pg{min-height:100vh}.pg[hidden]{display:none}\n</style>");
     var html=head+"</head>\n<body class=\"font-sans antialiased\">\n"+pages+"<script>"+SINGLE_JS+"<\/script>\n</body>\n</html>\n";
-    var missing={};
-    Object.keys(files).forEach(function(p){html=html.split(p).join(files[p].url)});
-    (html.match(/images\/[A-Za-z0-9_.\-]+\.(png|jpe?g|webp|gif|svg)/g)||[]).forEach(function(p){missing[p]=1});
+    /* 이미지는 한 번만 담고(IMG), 각 페이지는 data-src 로 참조 → 파일 크기 중복 방지 */
+    var missing={},used={};
+    html=html.replace(/(src|srcset)="(images\/[^"]+)"/g,function(m,a,p){
+      if(files[p]){used[p]=files[p].url;return "data-"+a+'="'+p+'"'}
+      missing[p]=1;return m;
+    });
+    html=html.replace("<script>"+SINGLE_JS,"<script>window.__IMG="+JSON.stringify(used)+";"+SINGLE_JS);
     return {html:html,missing:Object.keys(missing)};
   }
   document.getElementById("bSingle").onclick=function(){
