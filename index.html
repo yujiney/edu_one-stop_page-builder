@@ -392,11 +392,21 @@
   };
   document.getElementById("bSave").onclick=function(){download(new Blob([JSON.stringify(D,null,2)],{type:"application/json"}),"program-"+new Date().toISOString().slice(0,10)+".json")};
   document.getElementById("bLoad").onclick=function(){document.getElementById("fLoad").click()};
-  document.getElementById("fLoad").onchange=function(){var f=this.files[0];if(!f)return;var r=new FileReader();r.onload=function(){try{D=Object.assign(clone(DEFAULT_PROGRAM),JSON.parse(r.result));buildForm();changed();say("불러왔습니다.")}catch(e){say("JSON을 읽지 못했습니다.")}};r.readAsText(f)};
+  document.getElementById("fLoad").onchange=function(){var f=this.files[0];if(!f)return;var r=new FileReader();r.onload=function(){try{D=Object.assign(clone(DEFAULT_PROGRAM),JSON.parse(r.result));fixImages();buildForm();changed();say("불러왔습니다.")}catch(e){say("JSON을 읽지 못했습니다.")}};r.readAsText(f)};
   document.getElementById("bReset").onclick=function(){if(confirm("입력한 내용을 지우고 기본값(9월 워크숍)으로 되돌릴까요?")){D=clone(DEFAULT_PROGRAM);files={};buildForm();changed()}};
+
+  /* 이전 버전에서 저장된 이미지 경로(.png 등)가 남아 사진이 깨지는 문제 방지: 기본 이미지 경로로 되돌림 */
+  function fixImages(){
+    var def=DEFAULT_PROGRAM.images||{};D.images=Object.assign({},D.images||{});
+    Object.keys(def).forEach(function(k){
+      var v=D.images[k];
+      if(typeof v!=="string"||v.indexOf("data:")!==0)D.images[k]=def[k];
+    });
+  }
 
   /* ---------- 시작 ---------- */
   try{var s=localStorage.getItem(KEY);D=s?Object.assign(clone(DEFAULT_PROGRAM),JSON.parse(s)):clone(DEFAULT_PROGRAM)}catch(e){D=clone(DEFAULT_PROGRAM)}
+  fixImages();
   buildForm();checklist();tabs();
 })();
 </script>
